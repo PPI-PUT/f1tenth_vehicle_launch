@@ -13,70 +13,46 @@
 # limitations under the License.
 
 from launch import LaunchDescription
-from launch.actions import DeclareLaunchArgument, OpaqueFunction, IncludeLaunchDescription
-from launch.launch_description_sources import FrontendLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
-from launch_ros.actions import Node
+from launch.actions import DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription
+from launch.actions import OpaqueFunction
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from launch.substitutions import LaunchConfiguration
+from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 
 
 def launch_setup(context, *args, **kwargs):
-    # TODO: Implement vesc_driver <-> autoware interface
-    # vesc_interface_node = Node(
-    #     name='vesc_interface',
-    #     namespace='',
-    #     package='vesc_interface',
-    #     executable='vesc_interface',
-    #     output='screen',
-    # )
-
-    raw_vehicle_converter_launch = IncludeLaunchDescription(
-        FrontendLaunchDescriptionSource(
+    vesc_driver_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
             launch_file_path=PathJoinSubstitution([
-                FindPackageShare('raw_vehicle_cmd_converter'), 'launch', 'raw_vehicle_converter.launch.xml'
+                FindPackageShare('vesc_driver'), 'launch', 'vesc_driver_node.launch.py'
             ]),
-        ),
-        launch_arguments={
-            'converter_param_path': PathJoinSubstitution([
-                FindPackageShare('raw_vehicle_cmd_converter'), 'config', 'converter.param.yaml'
+        )
+    )
+
+    vesc_interface_launch = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            launch_file_path=PathJoinSubstitution([
+                FindPackageShare('vesc_interface'), 'launch', 'vesc_interface.launch.py'
             ]),
-            'csv_path_accel_map': PathJoinSubstitution([
-                FindPackageShare('raw_vehicle_cmd_converter'), 'data', 'default/accel_map.csv'
-            ]),
-            'csv_path_brake_map': PathJoinSubstitution([
-                FindPackageShare('raw_vehicle_cmd_converter'), 'data', 'default/brake_map.csv'
-            ]),
-            'csv_path_steer_map': PathJoinSubstitution([
-                FindPackageShare('raw_vehicle_cmd_converter'), 'data', 'default/steer_map.csv'
-            ]),
-            'max_throttle': '0.4',
-            'max_brake': '0.9',
-            'max_steer': '10.0',
-            'min_steer': '-10.0',
-            'convert_accel_cmd': 'true',
-            'convert_brake_cmd': 'true',
-            'convert_steer_cmd': 'true',
-            'input_control_cmd': '/control/command/control_cmd',
-            'input_odometry': '/localization/kinematic_state',
-            'input_steering': '/vehicle/status/steering_status',
-            'output_actuation_cmd': '/control/command/actuation_cmd'
-        }.items()
+        )
     )
 
     return [
-        # vehicle_ppi_interface_container,
-        # raw_vehicle_converter_launch
+        vesc_driver_launch,
+        vesc_interface_launch
     ]
 
 
 def generate_launch_description():
     declared_arguments = []
-    
-    def add_launch_arg(name: str, default_value=None):
+
+    def add_launch_arg(name: str, default_value: str = None):
         declared_arguments.append(
             DeclareLaunchArgument(name, default_value=default_value)
         )
-    
+
     return LaunchDescription([
         *declared_arguments,
         OpaqueFunction(function=launch_setup)
